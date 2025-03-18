@@ -27,6 +27,25 @@ def get_stock_data(ticker, period='1y'):
         st.error(f"Error fetching data for {ticker}: {e}")
         print(f"Detailed error: {str(e)}")
         return None, None, None, None, None
+
+def get_currency_symbol(ticker, info):
+    # Check if currency info is available in the stock info
+    if info and 'currency' in info:
+        currency = info['currency']
+        if currency == 'IDR':
+            return 'Rp'
+        elif currency == 'USD':
+            return '$'
+        # Add more currencies as needed
+        return currency
+    
+    # Fallback to detecting from ticker suffix
+    if '.JK' in ticker:  # Jakarta Stock Exchange
+        return 'Rp'
+    elif '.KS' in ticker:  # Korea
+        return '₩'
+    # Add more exchanges as needed
+    return '$'  # Default to USD
     
 # Function to calculate technical indicators
 def calculate_indicators(df):
@@ -120,7 +139,7 @@ def analyze_stock(hist, ratios):
             current_price = hist['Close'].iloc[-1]
             price_year_ago = hist['Close'].iloc[0]
             yearly_return = ((current_price / price_year_ago) - 1) * 100
-            analysis['Current Price'] = f"${current_price:.2f}"
+            analysis['Current Price'] = f"{current_price:.2f}"
             analysis['1-Year Return'] = f"{yearly_return:.2f}%"
             
             # Volatility
@@ -297,6 +316,9 @@ if ticker_input:
     hist, info, financials, balance_sheet, cash_flow = get_stock_data(ticker_input, selected_period)
     
     if hist is not None and info is not None:
+        #Get currency symbols 
+        currency_symbol = get_currency_symbol(ticker_input, info)
+        
         # Calculate indicators
         hist = calculate_indicators(hist)
         
@@ -318,7 +340,7 @@ if ticker_input:
             st.write(f"**Business Summary:** {info.get('longBusinessSummary', 'N/A')[:500]}...")
         with col2:
             st.metric("Current Price", 
-                      f"${hist['Close'].iloc[-1]:.2f}", 
+                      f"{currency_symbol}{hist['Close'].iloc[-1]:.2f}", 
                       f"{(hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100:.2f}%")
             st.metric("Recommendation", recommendation, f"Score: {score:.2f}%")
         
@@ -368,7 +390,7 @@ if ticker_input:
         fig.update_layout(
             title=f"{ticker_input} Stock Price ({selected_period})",
             xaxis_title="Date",
-            yaxis_title="Price ($)",
+            yaxis_title="Price ()",
             legend_title="Legend",
             template="plotly_white",
             height=600
@@ -406,7 +428,7 @@ if ticker_input:
         fig_bb.add_trace(go.Scatter(x=hist.index, y=hist['Upper_BB'], name='Upper Band', line=dict(color='red', width=1)))
         fig_bb.add_trace(go.Scatter(x=hist.index, y=hist['MA20'], name='20-Day MA', line=dict(color='orange', width=1)))
         fig_bb.add_trace(go.Scatter(x=hist.index, y=hist['Lower_BB'], name='Lower Band', line=dict(color='green', width=1)))
-        fig_bb.update_layout(title="Bollinger Bands", xaxis_title="Date", yaxis_title="Price ($)", template="plotly_white")
+        fig_bb.update_layout(title="Bollinger Bands", xaxis_title="Date", yaxis_title="Price ()", template="plotly_white")
         st.plotly_chart(fig_bb, use_container_width=True)
         
         # Show key metrics
@@ -424,8 +446,8 @@ if ticker_input:
             st.metric("Profit Margin", f"{ratios['Profit Margin (%)']:.2f}%" if isinstance(ratios['Profit Margin (%)'], (int, float)) else "N/A")
         
         with col3:
-            st.metric("EPS", f"${ratios['EPS']:.2f}" if isinstance(ratios['EPS'], (int, float)) else "N/A")
-            st.metric("Market Cap", f"${ratios['Market Cap'] / 1e9:.2f}B" if isinstance(ratios['Market Cap'], (int, float)) else "N/A")
+            st.metric("EPS", f"{ratios['EPS']:.2f}" if isinstance(ratios['EPS'], (int, float)) else "N/A")
+            st.metric("Market Cap", f"{currency_symbol}{ratios['Market Cap'] / 1e9:.2f}B" if isinstance(ratios['Market Cap'], (int, float)) else "N/A")
             st.metric("Debt to Equity", f"{ratios['Debt to Equity']:.2f}" if isinstance(ratios['Debt to Equity'], (int, float)) else "N/A")
         
         # Analysis summary
@@ -502,7 +524,7 @@ if ticker_input:
                         f"{ratios['ROE (%)']:.2f}%" if isinstance(ratios['ROE (%)'], (int, float)) else "N/A",
                         f"{ratios['ROA (%)']:.2f}%" if isinstance(ratios['ROA (%)'], (int, float)) else "N/A",
                         f"{ratios['Profit Margin (%)']:.2f}%" if isinstance(ratios['Profit Margin (%)'], (int, float)) else "N/A",
-                        f"${ratios['EPS']:.2f}" if isinstance(ratios['EPS'], (int, float)) else "N/A"
+                        f"{ratios['EPS']:.2f}" if isinstance(ratios['EPS'], (int, float)) else "N/A"
                     ],
                     f'{comparison_ticker}': [
                         f"{comp_ratios['P/E Ratio']:.2f}" if isinstance(comp_ratios['P/E Ratio'], (int, float)) else "N/A",
@@ -511,7 +533,7 @@ if ticker_input:
                         f"{comp_ratios['ROE (%)']:.2f}%" if isinstance(comp_ratios['ROE (%)'], (int, float)) else "N/A",
                         f"{comp_ratios['ROA (%)']:.2f}%" if isinstance(comp_ratios['ROA (%)'], (int, float)) else "N/A",
                         f"{comp_ratios['Profit Margin (%)']:.2f}%" if isinstance(comp_ratios['Profit Margin (%)'], (int, float)) else "N/A",
-                        f"${comp_ratios['EPS']:.2f}" if isinstance(comp_ratios['EPS'], (int, float)) else "N/A"
+                        f"{comp_ratios['EPS']:.2f}" if isinstance(comp_ratios['EPS'], (int, float)) else "N/A"
                     ]
                 }
                 
@@ -672,7 +694,7 @@ if ticker_input:
                 quarterly_financials = quarterly_financials / 1e6  # Convert to millions
                 
                 # Display the financials
-                st.write("**Quarterly Financials (in $ millions):**")
+                st.write("**Quarterly Financials (in  millions):**")
                 st.dataframe(quarterly_financials.round(2).head(10))
                 
                 # Plot revenue and net income trends
@@ -692,7 +714,7 @@ if ticker_input:
                     fig.update_layout(
                         title="Revenue and Net Income Trends",
                         xaxis_title="Quarter",
-                        yaxis_title="$ Millions",
+                        yaxis_title=" Millions",
                         template="plotly_white"
                     )
                     st.plotly_chart(fig, use_container_width=True)
