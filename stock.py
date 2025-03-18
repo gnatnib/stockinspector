@@ -739,5 +739,26 @@ if ticker_input:
         # Disclaimer
         st.sidebar.markdown("---")
         st.sidebar.write("**Disclaimer:** This tool is for informational purposes only. It is not financial advice.")
+
+        st.markdown(
+    """
+    <style>
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: white;
+        color: gray;
+        text-align: right;
+        padding-right: 20px;
+    }
+    </style>
+    <div class="footer">
+        <p>Created by Bintang</p>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
     else:
         st.error(f"Could not retrieve data for {ticker_input}. Please check the ticker symbol and try again.")
