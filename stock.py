@@ -10,10 +10,7 @@ from pandas_datareader import data as pdr
 # Set page configuration
 st.set_page_config(page_title="Stock Analysis Dashboard", layout="wide")
 
-# Initialize yfinance with pandas_datareader
-yf.pdr_override()
 
-# Function to get stock data
 @st.cache_data(ttl=3600)
 def get_stock_data(ticker, period='1y'):
     try:
@@ -23,11 +20,14 @@ def get_stock_data(ticker, period='1y'):
         financials = stock.financials
         balance_sheet = stock.balance_sheet
         cash_flow = stock.cashflow
+        # Add a debug print to see if any data is coming through
+        print(f"Retrieved {len(hist)} rows of history data for {ticker}")
         return hist, info, financials, balance_sheet, cash_flow
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
+        print(f"Detailed error: {str(e)}")
         return None, None, None, None, None
-
+    
 # Function to calculate technical indicators
 def calculate_indicators(df):
     # Calculate moving averages
@@ -283,7 +283,7 @@ st.title("Stock Analysis Dashboard")
 st.sidebar.header("Stock Selection")
 ticker_input = st.sidebar.text_input("Enter Stock Ticker (e.g., AAPL, MSFT)", "AAPL")
 period_options = ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"]
-selected_period = st.sidebar.selectbox("Select Time Period", period_options, index=3)
+selected_period = st.sidebar.selectbox("Select Time Period", period_options, index=2)  # Set to 6mo 
 
 # For comparison
 st.sidebar.header("Compare with another stock")
